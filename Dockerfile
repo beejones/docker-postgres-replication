@@ -1,7 +1,7 @@
 # -*- mode: conf -*-
 FROM postgres:12.3
 
-MAINTAINER me@nebirhos.com
+MAINTAINER contact@rousseau-alexandre.fr
 
 # common settings
 ENV MAX_CONNECTIONS 500
