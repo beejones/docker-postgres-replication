@@ -1,64 +1,54 @@
 #!/usr/bin/env bash
-set -eo pipefail
 
-image="$1"
+IMAGE="postgres-replication:test"
+CONTAINER_PREFIX="postgres-replication-test"
+POSTGRES_USER='postgres'
+POSTGRES_PASSWORD=''
+POSTGRES_DB='postgres'
 
-export POSTGRES_USER='postgres'
-export POSTGRES_PASSWORD=''
-export POSTGRES_DB='postgres'
+docker container rm -f "$CONTAINER_PREFIX-master" # 2> /dev/null
+docker container rm -f "$CONTAINER_PREFIX-slave" # 2> /dev/null
 
-psql() {
-    role="$1"
-    docker run --rm -i \
-               --link "postgres-$role" \
-               --entrypoint psql \
-               "$image" \
-               --host "postgres-$role" \
-               --username "$POSTGRES_USER" \
-               --dbname "$POSTGRES_DB" \
-               --no-align --tuples-only \
-               -c "${@:2}"
-}
+docker build -t $IMAGE .
 
-poll() {
-    set +e
-    MAX_TRIES=$1
-    tries=0
-    while true
-    do
-        sleep 2
-        psql master '\l' > /dev/null 2> /dev/null && psql slave '\l' > /dev/null 2> /dev/null
-        if [ $? -eq 0 ]; then
-            break
-        else
-            echo "Waiting for db to be up..."
-            ((tries++))
-        fi
-        if [ $tries -eq $MAX_TRIES ]; then
-            echo "FAIL: cannot connect to postgres"
-            exit 1
-        fi
-    done
-    set -e
-}
+docker run -e POSTGRES_USER=test \
+           -e POSTGRES_PASSWORD=password \
+           -e REPLICATION_USER=test_rep \
+           -e REPLICATION_PASSWORD=password \
+           -e POSTGRES_MASTER_SERVICE_HOST=postgres-master \
+           -e REPLICATION_ROLE=master \
+           --name "$CONTAINER_PREFIX-master" \
+           --detach \
+           $IMAGE
 
-mid=$(docker run -d --name postgres-master "$image")
-sid=$(docker run -d --name postgres-slave \
-             --link postgres-master \
-             -e POSTGRES_MASTER_SERVICE_HOST=postgres-master \
-             -e REPLICATION_ROLE=slave \
-             -t "$image")
-trap "docker rm -f $mid $sid > /dev/null" EXIT
+sleep 5
 
-poll 3 times
-psql master "CREATE TABLE replication_test (a INT, b INT, c VARCHAR(255))"
-psql master "INSERT INTO replication_test VALUES (1, 2, 'it works')"
+docker run  --link "$CONTAINER_PREFIX-master" \
+           -e POSTGRES_USER=test \
+           -e POSTGRES_PASSWORD=password \
+           -e REPLICATION_USER=test_rep \
+           -e REPLICATION_PASSWORD=password \
+           -e POSTGRES_MASTER_SERVICE_HOST=$CONTAINER_PREFIX-master \
+           -e REPLICATION_ROLE=slave \
+           --name "$CONTAINER_PREFIX-slave" \
+           --detach \
+           $IMAGE
 
-output=$(psql slave "SELECT c from replication_test")
-if [ "$output" == 'it works' ]; then
-    echo "OK"
+sleep 5
+
+docker exec "$CONTAINER_PREFIX-master" psql -U test postgres -c 'CREATE TABLE replication_test (a INT, b INT, c VARCHAR(255))'
+docker exec "$CONTAINER_PREFIX-master" psql -U test postgres -c "INSERT INTO replication_test VALUES (1, 2, 'it works')"
+
+sleep 5
+
+docker exec "$CONTAINER_PREFIX-slave" psql -U test postgres -c "SELECT COUNT(*) FROM replication_test" -X -A
+
+docker logs "$CONTAINER_PREFIX-slave"
+result=$(docker exec "$CONTAINER_PREFIX-slave" psql -U test postgres -c "SELECT COUNT(*) FROM replication_test" -X -A -t)
+
+if [ "$result" = "1" ]
+then
     exit 0
 else
-    echo "FAIL"
     exit 1
 fi
