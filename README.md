@@ -28,16 +28,16 @@ docker exec -it docker-postgres-replication_postgres-master_1 psql -U postgres
 ```
 
 ```sql
-postgres=# create database test;
-postgres=# \c test
-test=# create table posts (title text);
-test=# insert into posts values ('it works');
+create database test;
+\c test
+create table posts (title text);
+insert into posts values ('it works');
 ```
 
-Then changes will appear on slave
+Then changes will appear on replica
 
 ```sh
-docker exec docker-postgres-replication_postgres-slave_1 psql -U postgres test -c 'select * from posts'
+docker exec docker-postgres-replication_postgres-replica_1 psql -U postgres test -c 'select * from posts'
   title
 ----------
  it works
@@ -62,7 +62,7 @@ services:
     expose:
       - 5432
 
-  postgres-slave:
+  postgres-replica:
     image: madeindjs/postgres-replication:12.3
     links:
       - postgres
@@ -71,7 +71,7 @@ services:
       POSTGRES_PASSWORD: password
       REPLICATION_USER: madeindjs_rep
       REPLICATION_PASSWORD: password
-      REPLICATION_ROLE: slave
+      REPLICATION_ROLE: replica
       POSTGRES_MASTER_SERVICE_HOST: postgres
     expose:
       - 5432
@@ -87,12 +87,12 @@ To run with Docker, first run the Postgres master:
 docker run -p 127.0.0.1:5432:5432 --name postgres-master madeindjs/postgres-replication
 ```
 
-Then Postgres slave(s):
+Then Postgres replica(s):
 
 ```
 docker run -p 127.0.0.1:5433:5432 --link postgres-master \
            -e POSTGRES_MASTER_SERVICE_HOST=postgres-master \
-           -e REPLICATION_ROLE=slave \
+           -e REPLICATION_ROLE=replica \
            -t madeindjs/postgres-replication
 ```
 

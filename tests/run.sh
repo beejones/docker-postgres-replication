@@ -7,7 +7,7 @@ POSTGRES_PASSWORD=''
 POSTGRES_DB='postgres'
 
 docker container rm -f "$CONTAINER_PREFIX-master" # 2> /dev/null
-docker container rm -f "$CONTAINER_PREFIX-slave" # 2> /dev/null
+docker container rm -f "$CONTAINER_PREFIX-replica" # 2> /dev/null
 
 docker build -t $IMAGE .
 
@@ -29,8 +29,8 @@ docker run  --link "$CONTAINER_PREFIX-master" \
            -e REPLICATION_USER=test_rep \
            -e REPLICATION_PASSWORD=password \
            -e POSTGRES_MASTER_SERVICE_HOST=$CONTAINER_PREFIX-master \
-           -e REPLICATION_ROLE=slave \
-           --name "$CONTAINER_PREFIX-slave" \
+           -e REPLICATION_ROLE=replica \
+           --name "$CONTAINER_PREFIX-replica" \
            --detach \
            $IMAGE
 
@@ -41,10 +41,10 @@ docker exec "$CONTAINER_PREFIX-master" psql -U test postgres -c "INSERT INTO rep
 
 sleep 5
 
-docker exec "$CONTAINER_PREFIX-slave" psql -U test postgres -c "SELECT COUNT(*) FROM replication_test" -X -A
+docker exec "$CONTAINER_PREFIX-replica" psql -U test postgres -c "SELECT COUNT(*) FROM replication_test" -X -A
 
-docker logs "$CONTAINER_PREFIX-slave"
-result=$(docker exec "$CONTAINER_PREFIX-slave" psql -U test postgres -c "SELECT COUNT(*) FROM replication_test" -X -A -t)
+docker logs "$CONTAINER_PREFIX-replica"
+result=$(docker exec "$CONTAINER_PREFIX-replica" psql -U test postgres -c "SELECT COUNT(*) FROM replication_test" -X -A -t)
 
 if [ "$result" = "1" ]
 then
