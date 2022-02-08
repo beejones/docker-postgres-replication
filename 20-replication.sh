@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-if [ $REPLICATION_ROLE = "master" ]; then
+if [ $REPLICATION_ROLE = "primary" ]; then
     psql -U $POSTGRES_USER -c "CREATE ROLE $REPLICATION_USER WITH REPLICATION PASSWORD '$REPLICATION_PASSWORD' LOGIN"
 
 elif [ $REPLICATION_ROLE = "replica" ]; then
@@ -11,13 +11,14 @@ elif [ $REPLICATION_ROLE = "replica" ]; then
     # make sure standby's data directory is empty
     rm -r "$PGDATA"/*
 
+    echo [*] $REPLICATION_ROLE create backup
     pg_basebackup \
          --write-recovery-conf \
          --pgdata="$PGDATA" \
          --wal-method=fetch \
          --username=$REPLICATION_USER \
-         --host=$POSTGRES_MASTER_SERVICE_HOST \
-         --port=$POSTGRES_MASTER_SERVICE_PORT \
+         --host=$POSTGRES_PRIMARY_SERVICE_HOST \
+         --port=$POSTGRES_PRIMARY_SERVICE_PORT \
          --progress \
          --verbose
 

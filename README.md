@@ -1,19 +1,8 @@
 # Postgres Streaming Replication
 
-Enhanced version of the official Postgres image to support streaming replication
-out of the box.
+Based on the image: https://github.com/nebirhos/docker-postgres-replication
 
 Postgres-replication is meant to be used with orchestration systems such as Kubernetes.
-
-## Tags
-
-Images are automatically updated when the [official postgres image](https://hub.docker.com/_/postgres/) is updated.
-
-Supported tags:
-
-- 9.6, 9, latest ([9.6](https://github.com/nebirhos/docker-postgres-replication/tree/9.6))
-- 9.5 ([9.5](https://github.com/nebirhos/docker-postgres-replication/tree/9.5))
-- 12.3 ([12.3](https://github.com/madeindjs/docker-postgres-replication/tree/12.3))
 
 ## Run with Docker Compose
 
@@ -21,10 +10,10 @@ Supported tags:
 docker-compose up
 ```
 
-Then you can try to make somes changes on master
+Then you can try to make somes changes on primary
 
 ```sh
-docker exec -it docker-postgres-replication_postgres-master_1 psql -U postgres
+docker exec -it docker-postgres-replication_postgres-primary_1 psql -U postgres
 ```
 
 ```sql
@@ -43,61 +32,3 @@ docker exec docker-postgres-replication_postgres-replica_1 psql -U postgres test
  it works
 (1 row)
 ```
-
-### Exemple of `docker-compose.yml`
-
-```yml
-version: "3.3"
-services:
-  postgres:
-    image: madeindjs/postgres-replication:12.3
-    shm_size: "2gb"
-    environment:
-      POSTGRES_USER: madeindjs
-      POSTGRES_PASSWORD: password
-      REPLICATION_USER: madeindjs_rep
-      REPLICATION_PASSWORD: password
-    ports:
-      - 5432:5432
-    expose:
-      - 5432
-
-  postgres-replica:
-    image: madeindjs/postgres-replication:12.3
-    links:
-      - postgres
-    environment:
-      POSTGRES_USER: madeindjs
-      POSTGRES_PASSWORD: password
-      REPLICATION_USER: madeindjs_rep
-      REPLICATION_PASSWORD: password
-      REPLICATION_ROLE: replica
-      POSTGRES_MASTER_SERVICE_HOST: postgres
-    expose:
-      - 5432
-    depends_on:
-      - postgres
-```
-
-## Run with Docker
-
-To run with Docker, first run the Postgres master:
-
-```sh
-docker run -p 127.0.0.1:5432:5432 --name postgres-master madeindjs/postgres-replication
-```
-
-Then Postgres replica(s):
-
-```
-docker run -p 127.0.0.1:5433:5432 --link postgres-master \
-           -e POSTGRES_MASTER_SERVICE_HOST=postgres-master \
-           -e REPLICATION_ROLE=replica \
-           -t madeindjs/postgres-replication
-```
-
-## Notes
-
-Replication is set up at container start by putting scripts in the `/docker-entrypoint-initdb.d` folder. This way the original Postgres image scripts are left untouched.
-
-See [Dockerfile](Dockerfile) and [official Postgres image](https://hub.docker.com/_/postgres/) for custom environment variables.

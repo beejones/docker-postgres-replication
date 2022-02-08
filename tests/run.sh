@@ -6,7 +6,7 @@ POSTGRES_USER='postgres'
 POSTGRES_PASSWORD=''
 POSTGRES_DB='postgres'
 
-docker container rm -f "$CONTAINER_PREFIX-master" # 2> /dev/null
+docker container rm -f "$CONTAINER_PREFIX-primary" # 2> /dev/null
 docker container rm -f "$CONTAINER_PREFIX-replica" # 2> /dev/null
 
 docker build -t $IMAGE .
@@ -15,20 +15,20 @@ docker run -e POSTGRES_USER=test \
            -e POSTGRES_PASSWORD=password \
            -e REPLICATION_USER=test_rep \
            -e REPLICATION_PASSWORD=password \
-           -e POSTGRES_MASTER_SERVICE_HOST=postgres-master \
-           -e REPLICATION_ROLE=master \
-           --name "$CONTAINER_PREFIX-master" \
+           -e POSTGRES_PRIMARY_SERVICE_HOST=postgres-primary \
+           -e REPLICATION_ROLE=primary \
+           --name "$CONTAINER_PREFIX-primary" \
            --detach \
            $IMAGE
 
 sleep 5
 
-docker run  --link "$CONTAINER_PREFIX-master" \
+docker run  --link "$CONTAINER_PREFIX-primary" \
            -e POSTGRES_USER=test \
            -e POSTGRES_PASSWORD=password \
            -e REPLICATION_USER=test_rep \
            -e REPLICATION_PASSWORD=password \
-           -e POSTGRES_MASTER_SERVICE_HOST=$CONTAINER_PREFIX-master \
+           -e POSTGRES_PRIMARY_SERVICE_HOST=$CONTAINER_PREFIX-primary \
            -e REPLICATION_ROLE=replica \
            --name "$CONTAINER_PREFIX-replica" \
            --detach \
@@ -36,8 +36,8 @@ docker run  --link "$CONTAINER_PREFIX-master" \
 
 sleep 5
 
-docker exec "$CONTAINER_PREFIX-master" psql -U test postgres -c 'CREATE TABLE replication_test (a INT, b INT, c VARCHAR(255))'
-docker exec "$CONTAINER_PREFIX-master" psql -U test postgres -c "INSERT INTO replication_test VALUES (1, 2, 'it works')"
+docker exec "$CONTAINER_PREFIX-primary" psql -U test postgres -c 'CREATE TABLE replication_test (a INT, b INT, c VARCHAR(255))'
+docker exec "$CONTAINER_PREFIX-primary" psql -U test postgres -c "INSERT INTO replication_test VALUES (1, 2, 'it works')"
 
 sleep 5
 
