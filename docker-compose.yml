@@ -1,32 +1,27 @@
 version: '2'
 
 services:
-
-  postgres-primary:
-    build: 
-      context: "./"
-      dockerfile: "primary.dockerfile"
-    environment:
-      - POSTGRES_DATABASE=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - REPLICATION_ROLE=primary
-      
-    ports:
-      - 5432:5432
-
   postgres-replica:
+    build: ./Dockerfile
     #image: "nebirhos/postgres-replication"
-    build: 
-      context: "./"
-      dockerfile: "primary.dockerfile"
     ports:
       - 5433:5432
     links:
       - postgres-primary
     environment:
-      - POSTGRES_DATABASE=postgres
+      - REPLICATION_ROLE=replica
+      - POSTGRES_PRIMARY_SERVICE_HOST=postgres-primary
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - REPLICATION_ROLE=replica
-      - POSTGRES_MASTER_SERVICE_HOST=postgres-primary
+
+
+  postgres-primary:
+    build: ./Dockerfile
+    #image: "nebirhos/postgres-replication"
+    ports:
+      - 5432:5432
+    environment:
+      - REPLICATION_ROLE=primary
+      - POSTGRES_PRIMARY_SERVICE_HOST=postgres-primary
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
