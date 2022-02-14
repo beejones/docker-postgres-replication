@@ -8,7 +8,7 @@ echo "max_connections = $MAX_CONNECTIONS" >> "$PGDATA/postgresql.conf"
 # We set primary replication-related parameters for both replica and primary,
 # so that the replica might work as a primary after failover.
 echo "wal_level = hot_standby" >> "$PGDATA/postgresql.conf"
-echo "wal_keep_size  = $WAL_KEEP_SEGMENTS" >> "$PGDATA/postgresql.conf"
+echo "wal_keep_segments  = $WAL_KEEP_SEGMENTS" >> "$PGDATA/postgresql.conf"
 echo "max_wal_senders = $MAX_WAL_SENDERS" >> "$PGDATA/postgresql.conf"
 
 # replica settings, ignored on primary

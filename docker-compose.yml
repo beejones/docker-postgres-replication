@@ -2,8 +2,7 @@ version: '2'
 
 services:
   postgres-replica:
-    build: ./Dockerfile
-    #image: "nebirhos/postgres-replication"
+    build: .
     ports:
       - 5433:5432
     links:
@@ -16,8 +15,7 @@ services:
 
 
   postgres-primary:
-    build: ./Dockerfile
-    #image: "nebirhos/postgres-replication"
+    build: .
     ports:
       - 5432:5432
     environment:
